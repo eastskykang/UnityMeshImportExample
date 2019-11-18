@@ -4,9 +4,30 @@ using System.IO;
 using Assimp;
 using UnityEngine;
 using Material = UnityEngine.Material;
+using Mesh = UnityEngine.Mesh;
 
 namespace UnityMeshImporter
 {
+    class MeshMaterialBinding
+    {
+        private string meshName;
+        private UnityEngine.Mesh mesh;
+        private UnityEngine.Material material;
+        
+        private MeshMaterialBinding() {}    // Do not allow default constructor
+
+        public MeshMaterialBinding(string meshName, Mesh mesh, Material material)
+        {
+            this.meshName = meshName;
+            this.mesh = mesh;
+            this.material = material;
+        }
+
+        public Mesh Mesh { get => mesh; }
+        public Material Material { get => material; }
+        public string MeshName { get => meshName; }
+    }
+    
     public class MeshImporter
     {
         public static GameObject Load(string meshPath, float scaleX=1, float scaleY=1, float scaleZ=1)
@@ -19,11 +40,10 @@ namespace UnityMeshImporter
             if (scene == null)
                 return null;
             
-            GameObject uOb = null;
             string parentDir = Directory.GetParent(meshPath).FullName;
 
-                // material
-            List<UnityEngine.Material> materialList = new List<Material>();
+            // Materials
+            List<UnityEngine.Material> uMaterials = new List<Material>();
             if (scene.HasMaterials)
             {
                 foreach (var m in scene.Materials)
@@ -71,15 +91,14 @@ namespace UnityMeshImporter
                         uMaterial.SetTexture("_MainTex", uTexture);
                     }
 
-                    materialList.Add(uMaterial);
+                    uMaterials.Add(uMaterial);
                 }
             }
 
             // Mesh
+            List<MeshMaterialBinding> uMeshAndMats = new List<MeshMaterialBinding>();
             if (scene.HasMeshes)
             {
-                uOb = new GameObject();
-
                 foreach (var m in scene.Meshes)
                 {
                     List<Vector3> uVertices = new List<Vector3>();
@@ -134,21 +153,78 @@ namespace UnityMeshImporter
                     uMesh.normals = uNormals.ToArray();
                     uMesh.triangles = uIndices.ToArray();
                     uMesh.uv = uUv.ToArray();
-                
-                    var uSubOb = new GameObject(m.Name);
-                    uSubOb.AddComponent<MeshFilter>();
-                    uSubOb.AddComponent<MeshRenderer>();
-                    uSubOb.AddComponent<MeshCollider>();
-                    
-                    uSubOb.GetComponent<MeshFilter>().mesh = uMesh;
-                    uSubOb.GetComponent<MeshRenderer>().material = materialList[m.MaterialIndex];
-                    uSubOb.transform.SetParent(uOb.transform, true);
-                    uSubOb.transform.localScale = new Vector3(scaleX, scaleY, scaleZ);
+
+                    uMeshAndMats.Add(new MeshMaterialBinding(m.Name, uMesh, uMaterials[m.MaterialIndex]));
                 }
             }
+            
+            // Create GameObjects from nodes
+            GameObject NodeToGameObject(Node node)
+            {
+                GameObject uOb = new GameObject(node.Name);
+            
+                // Set Mesh
+                if (node.HasMeshes)
+                {
+                    foreach (var mIdx in node.MeshIndices)
+                    {
+                        var uMeshAndMat = uMeshAndMats[mIdx];
+                        
+                        GameObject uSubOb = new GameObject(uMeshAndMat.MeshName);
+                        uSubOb.AddComponent<MeshFilter>();
+                        uSubOb.AddComponent<MeshRenderer>();
+                        uSubOb.AddComponent<MeshCollider>();
+                    
+                        uSubOb.GetComponent<MeshFilter>().mesh = uMeshAndMat.Mesh;
+                        uSubOb.GetComponent<MeshRenderer>().material = uMeshAndMat.Material;
+                        uSubOb.transform.SetParent(uOb.transform, true);
+                        uSubOb.transform.localScale = new Vector3(scaleX, scaleY, scaleZ);
+                    }
+                }
+            
+                // Transform
+                UnityEngine.Matrix4x4 uTransform = new UnityEngine.Matrix4x4();
+                uTransform.SetColumn(0, new Vector4(
+                    node.Transform.A1, 
+                    node.Transform.B1,
+                    node.Transform.C1,
+                    node.Transform.D1
+                ));
+                uTransform.SetColumn(1, new Vector4(
+                    node.Transform.A2, 
+                    node.Transform.B2,
+                    node.Transform.C2,
+                    node.Transform.D2
+                ));
+                uTransform.SetColumn(2, new Vector4(
+                    node.Transform.A3, 
+                    node.Transform.B3,
+                    node.Transform.C3,
+                    node.Transform.D3
+                ));
+                uTransform.SetColumn(3, new Vector4(
+                    node.Transform.A4,
+                    node.Transform.B4,
+                    node.Transform.C4,
+                    node.Transform.D4
+                ));
 
-            return uOb;
+                uOb.transform.localPosition = uTransform.GetColumn(3);
+                uOb.transform.localRotation = UnityEngine.Quaternion.LookRotation(uTransform.GetColumn(2), uTransform.GetColumn(1));
+            
+                if (node.HasChildren)
+                {
+                    foreach (var cn in node.Children)
+                    {
+                        var uObChild = NodeToGameObject(cn);
+                        uObChild.transform.SetParent(uOb.transform);
+                    }
+                }
+            
+                return uOb;
+            }
+            
+            return NodeToGameObject(scene.RootNode);;
         }
-        
     }
 }

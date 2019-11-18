@@ -4,5 +4,8 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/MeshLoader.unity
+    guid: 866e42a7f5d1a7e69a22a27be9401a9a
   m_configObjects: {}

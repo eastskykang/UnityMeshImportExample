@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Assimp;
@@ -8,21 +9,21 @@ namespace UnityMeshImporter
 {
     public class MeshImporter
     {
-        public static GameObject Load(string meshPath)
+        public static GameObject Load(string meshPath, float scaleX=1, float scaleY=1, float scaleZ=1)
         {
             if(!File.Exists(meshPath))
                 return null;
-            
+
             AssimpContext importer = new AssimpContext();
             Scene scene = importer.ImportFile(meshPath);
             if (scene == null)
                 return null;
-
-            GameObject uOb = null;
             
-            // material
-            List<UnityEngine.Material> materialList = new List<Material>();
+            GameObject uOb = null;
+            string parentDir = Directory.GetParent(meshPath).FullName;
 
+                // material
+            List<UnityEngine.Material> materialList = new List<Material>();
             if (scene.HasMaterials)
             {
                 foreach (var m in scene.Materials)
@@ -53,12 +54,28 @@ namespace UnityMeshImporter
                         uMaterial.SetColor("_EmissionColor", color);
                         uMaterial.EnableKeyword("_EMISSION");
                     }
+                    
+                    // Texture
+                    if (m.HasTextureDiffuse)
+                    {
+                        Texture2D uTexture = new Texture2D(2,2);
+                        string texturePath = Path.Combine(parentDir, m.TextureDiffuse.FilePath);
+                        
+                        byte[] byteArray = File.ReadAllBytes(texturePath);
+                        bool isLoaded = uTexture.LoadImage(byteArray);
+                        if (!isLoaded)
+                        {
+                            throw new Exception("Cannot find texture file: " + texturePath);
+                        }
+                        
+                        uMaterial.SetTexture("_MainTex", uTexture);
+                    }
 
-                    materialList.Add(m.uMaterial);
+                    materialList.Add(uMaterial);
                 }
             }
 
-            // mesh
+            // Mesh
             if (scene.HasMeshes)
             {
                 uOb = new GameObject();
@@ -67,36 +84,56 @@ namespace UnityMeshImporter
                 {
                     List<Vector3> uVertices = new List<Vector3>();
                     List<Vector3> uNormals = new List<Vector3>();
+                    List<Vector2> uUv = new List<Vector2>();
                     List<int> uIndices = new List<int>();
                 
-                    // vertices
-                    foreach (var v in m.Vertices)
+                    // Vertices
+                    if (m.HasVertices)
                     {
-                        uVertices.Add(new Vector3(v.X, v.Y, v.Z));
+                        foreach (var v in m.Vertices)
+                        {
+                            uVertices.Add(new Vector3(v.X, v.Y, v.Z));
+                        }
                     }
-                
-                    // normals
-                    foreach (var n in m.Normals)
+
+                    // Normals
+                    if (m.HasNormals)
                     {
-                        uNormals.Add(new Vector3(n.X, n.Y, n.Z));
+                        foreach (var n in m.Normals)
+                        {
+                            uNormals.Add(new Vector3(n.X, n.Y, n.Z));
+                        }
                     }
-                
-                    // triangles
-                    foreach (var f in m.Faces)
+
+                    // Triangles
+                    if (m.HasFaces)
                     {
-                        // ignore non-triangle faces
-                        if (f.IndexCount != 3)
-                            continue;
-                    
-                        uIndices.Add(f.Indices[0]);
-                        uIndices.Add(f.Indices[1]);
-                        uIndices.Add(f.Indices[2]);
+                        foreach (var f in m.Faces)
+                        {
+                            // Ignore non-triangle faces
+                            if (f.IndexCount != 3)
+                                continue;
+
+                            uIndices.Add(f.Indices[0]);
+                            uIndices.Add(f.Indices[1]);
+                            uIndices.Add(f.Indices[2]);
+                        }
+                    }
+
+                    // Uv (texture coordinate) 
+                    if (m.HasTextureCoords(0))
+                    {
+                        foreach (var uv in m.TextureCoordinateChannels[0])
+                        {
+                            uUv.Add(new Vector2(uv.X, uv.Y));
+                        }
                     }
                 
                     UnityEngine.Mesh uMesh = new UnityEngine.Mesh();
                     uMesh.vertices = uVertices.ToArray();
                     uMesh.normals = uNormals.ToArray();
                     uMesh.triangles = uIndices.ToArray();
+                    uMesh.uv = uUv.ToArray();
                 
                     var uSubOb = new GameObject(m.Name);
                     uSubOb.AddComponent<MeshFilter>();
@@ -106,6 +143,7 @@ namespace UnityMeshImporter
                     uSubOb.GetComponent<MeshFilter>().mesh = uMesh;
                     uSubOb.GetComponent<MeshRenderer>().material = materialList[m.MaterialIndex];
                     uSubOb.transform.SetParent(uOb.transform, true);
+                    uSubOb.transform.localScale = new Vector3(scaleX, scaleY, scaleZ);
                 }
             }
 

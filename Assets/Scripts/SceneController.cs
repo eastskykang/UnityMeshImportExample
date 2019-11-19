@@ -70,7 +70,7 @@ namespace UnityMeshImporter
                     try
                     {
                         var ob = MeshImporter.Load(path, _meshScale, _meshScale, _meshScale);
-                        ob.transform.SetParent(_root.transform);
+                        ob.transform.SetParent(_root.transform, false);
                     }
                     catch (Exception e)
                     {

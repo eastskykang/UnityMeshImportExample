@@ -75,6 +75,12 @@ namespace UnityMeshImporter
                         uMaterial.EnableKeyword("_EMISSION");
                     }
                     
+                    // Reflectivity
+                    if (m.HasReflectivity)
+                    {
+                        uMaterial.SetFloat("_Glossiness", m.Reflectivity);
+                    }
+                    
                     // Texture
                     if (m.HasTextureDiffuse)
                     {
@@ -111,7 +117,7 @@ namespace UnityMeshImporter
                     {
                         foreach (var v in m.Vertices)
                         {
-                            uVertices.Add(new Vector3(v.X, v.Y, v.Z));
+                            uVertices.Add(new Vector3(-v.X, v.Y, v.Z));
                         }
                     }
 
@@ -120,7 +126,7 @@ namespace UnityMeshImporter
                     {
                         foreach (var n in m.Normals)
                         {
-                            uNormals.Add(new Vector3(n.X, n.Y, n.Z));
+                            uNormals.Add(new Vector3(-n.X, n.Y, n.Z));
                         }
                     }
 
@@ -133,9 +139,9 @@ namespace UnityMeshImporter
                             if (f.IndexCount != 3)
                                 continue;
 
-                            uIndices.Add(f.Indices[0]);
-                            uIndices.Add(f.Indices[1]);
                             uIndices.Add(f.Indices[2]);
+                            uIndices.Add(f.Indices[1]);
+                            uIndices.Add(f.Indices[0]);
                         }
                     }
 
@@ -208,16 +214,19 @@ namespace UnityMeshImporter
                     node.Transform.C4,
                     node.Transform.D4
                 ));
-
+                
+                var euler = uTransform.rotation.eulerAngles;
+                
                 uOb.transform.localPosition = uTransform.GetColumn(3);
-                uOb.transform.localRotation = UnityEngine.Quaternion.LookRotation(uTransform.GetColumn(2), uTransform.GetColumn(1));
+                uOb.transform.localRotation = UnityEngine.Quaternion.Euler(euler.x, -euler.y, euler.z);
+//                uOb.transform.localRotation = UnityEngine.Quaternion.LookRotation(uTransform.GetColumn(2), uTransform.GetColumn(1));
             
                 if (node.HasChildren)
                 {
                     foreach (var cn in node.Children)
                     {
                         var uObChild = NodeToGameObject(cn);
-                        uObChild.transform.SetParent(uOb.transform);
+                        uObChild.transform.SetParent(uOb.transform, false);
                     }
                 }
             

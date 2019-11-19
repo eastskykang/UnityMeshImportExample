@@ -23,13 +23,11 @@
  */
 
 using System;
-using System.IO;
-using Assimp;
-using Assimp.Configs;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityMeshImporter;
 
-namespace UnityMeshImporter
+namespace UnityMeshImportExample
 {
     public class SceneController : MonoBehaviour
     {

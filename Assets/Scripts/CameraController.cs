@@ -25,7 +25,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-namespace UnityMeshImporter
+namespace UnityMeshImportExample
 {
     public class CameraController : MonoBehaviour
     {

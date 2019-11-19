@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.donghok.meshimporter": "https://github.com/eastskykang/UnityMeshImporter.git",
     "com.unity.collab-proxy": "1.2.16",
     "com.unity.ext.nunit": "1.0.0",
     "com.unity.ide.rider": "1.1.0",
@@ -40,5 +41,11 @@
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
     "com.unity.modules.xr": "1.0.0"
+  },
+  "lock": {
+    "com.donghok.meshimporter": {
+      "hash": "757270fe47722afab65c1e25ebfa0fd0270de381",
+      "revision": "HEAD"
+    }
   }
 }

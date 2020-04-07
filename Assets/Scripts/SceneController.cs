@@ -57,6 +57,7 @@ namespace UnityMeshImportExample
             _errorText = GameObject.Find("ErrorText");
             _scaleInputField = GameObject.Find("ScaleInputField");
             _scaleSlider = GameObject.Find("ScaleSlider");
+            _scaleSlider.GetComponent<Slider>().onValueChanged.AddListener((value) => { _meshScale = value; });
             
             var loadButton = GameObject.Find("LoadButton").GetComponent<Button>();
             loadButton.onClick.AddListener(() =>

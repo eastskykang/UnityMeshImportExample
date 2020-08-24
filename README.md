@@ -2,6 +2,8 @@
 
 Runtime mesh import example for Unity.
 
+**Update**: Tested on Linux, macOS and Windows.
+
 ## Dependencies
 
 The following dependency is already included in the project. 
